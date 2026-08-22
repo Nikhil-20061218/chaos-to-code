@@ -2,6 +2,7 @@ const documentService = require('../services/documentService');
 const documentProcessingService = require('../services/documentProcessingService');
 const guidedFormService = require('../services/guidedFormService');
 const reviewService = require('../services/reviewService');
+const translationService = require('../services/translationService');
 const fs = require('fs');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
@@ -38,6 +39,16 @@ const getAnswers = asyncHandler(async (request, response) => {
   response.status(200).json({ answers });
 });
 
+const getTranslatedFieldText = asyncHandler(async (request, response) => {
+  const text = await translationService.translateFieldText({
+    documentId: request.params.id,
+    owner: request.uploadOwner,
+    fieldId: request.params.fieldId,
+    locale: request.query.locale,
+  });
+  response.status(200).json({ text });
+});
+
 const saveAnswers = asyncHandler(async (request, response) => {
   const answers = await guidedFormService.saveAnswers({
     documentId: request.params.id, owner: request.uploadOwner, answers: request.body && request.body.answers,
@@ -69,4 +80,4 @@ const downloadPdf = asyncHandler(async (request, response) => {
   fs.createReadStream(filePath).on('error', () => response.destroy()).pipe(response);
 });
 
-module.exports = { upload, analyze, getDocument, getForm, getAnswers, saveAnswers, getReview, confirmReview, generatePdf, downloadPdf };
+module.exports = { upload, analyze, getDocument, getForm, getAnswers, getTranslatedFieldText, saveAnswers, getReview, confirmReview, generatePdf, downloadPdf };

@@ -1,19 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '../common/Button';
 import { TrustIndicators } from './TrustIndicators';
 import { WorkflowVisual } from './WorkflowVisual';
+import { authService } from '../../services/authService';
 
 interface HeroSectionProps {
   onNavigate?: (path: string) => void;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate }) => {
+  const [startingGuest, setStartingGuest] = useState(false);
   const navigate = (path: string) => {
     if (onNavigate) {
       onNavigate(path);
     } else {
       window.location.hash = path.replace('/', '#');
     }
+  };
+
+  const continueAsGuest = async () => {
+    setStartingGuest(true);
+    try { await authService.createGuestSession(); } finally { setStartingGuest(false); navigate('/upload'); }
   };
 
   return (
@@ -52,7 +59,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate }) => {
               <Button
                 variant="primary"
                 size="lg"
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/upload')}
                 className="rounded-xl px-7 py-4 text-base font-semibold shadow-md hover:shadow-lg transition-all"
               >
                 Upload a Form
@@ -61,10 +68,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate }) => {
               <Button
                 variant="secondary"
                 size="lg"
-                onClick={() => navigate('/login')}
+                onClick={() => void continueAsGuest()}
+                disabled={startingGuest}
                 className="rounded-xl px-7 py-4 text-base font-medium border-slate-300 text-slate-700 hover:bg-slate-50 transition-all"
               >
-                Continue as Guest
+                {startingGuest ? 'Starting guest session…' : 'Continue as Guest'}
               </Button>
             </div>
 

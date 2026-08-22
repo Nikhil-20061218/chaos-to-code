@@ -19,10 +19,10 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
   };
 
   const navLinks = [
-    { label: 'Features', href: '#features' },
-    { label: 'How It Works', href: '#how-it-works' },
-    { label: 'Security', href: '#security' },
-    { label: 'About', href: '#about' },
+    { label: 'Features', path: '/features' },
+    { label: 'How It Works', path: '/how-it-works' },
+    { label: 'Security', path: '/security' },
+    { label: 'About', path: '/about' },
   ];
 
   return (
@@ -43,7 +43,8 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
           {navLinks.map((link) => (
             <a
               key={link.label}
-              href={link.href}
+              href={link.path}
+              onClick={(event) => { event.preventDefault(); navigate(link.path); }}
               className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-700 rounded-md px-1 py-0.5"
             >
               {link.label}
@@ -93,8 +94,8 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate }) => {
             {navLinks.map((link) => (
               <a
                 key={link.label}
-                href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
+                href={link.path}
+                onClick={(event) => { event.preventDefault(); setMobileMenuOpen(false); navigate(link.path); }}
                 className="px-3 py-2.5 rounded-lg text-base font-medium text-slate-700 hover:text-brand-700 hover:bg-brand-50 transition-colors"
               >
                 {link.label}

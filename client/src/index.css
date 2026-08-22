@@ -44,6 +44,11 @@
   }
 }
 
+.accessai-high-contrast body { background: #fff; color: #000; }
+.accessai-high-contrast .text-slate-600, .accessai-high-contrast .text-slate-500 { color: #1e293b !important; }
+.accessai-high-contrast .border-slate-200 { border-color: #334155 !important; }
+.accessai-reduced-motion *, .accessai-reduced-motion *::before, .accessai-reduced-motion *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+
 /* Screen reader only helper */
 .sr-only-focusable:not(:focus):not(:focus-within) {
   position: absolute !important;

@@ -42,7 +42,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
 
   // Real-time password criteria
   const passwordCriteria = {
-    hasMinLength: password.length >= 8,
+    hasMinLength: password.length >= 12,
     hasUpper: /[A-Z]/.test(password),
     hasLower: /[a-z]/.test(password),
     hasNumber: /[0-9]/.test(password),
@@ -120,9 +120,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
         password,
       });
 
-      // Navigate to login with success feedback
-      navigate('/login', {
-        registeredSuccess: true,
+      // New accounts must verify the email before they can sign in.
+      navigate('/verify-email', {
         email: email.trim(),
       });
     } catch (err: unknown) {
@@ -359,7 +358,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigate }) => {
                             <X className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" aria-hidden="true" />
                           )}
                           <span className={passwordCriteria.hasMinLength ? 'text-emerald-700 font-medium' : ''}>
-                            8+ characters
+                            12+ characters
                           </span>
                         </div>
 

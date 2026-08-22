@@ -22,6 +22,71 @@ export interface AccessibilityTask {
   }>;
 }
 
+export type FormAnswer = string | number | boolean;
+export type FormAnswers = Record<string, FormAnswer>;
+
+export interface DocumentReview {
+  title: string;
+  language: string;
+  complete: boolean;
+  missingRequiredFields: string[];
+  sections: Array<{
+    id: string;
+    title: string;
+    fields: Array<{
+      id: string;
+      label: string;
+      answer: FormAnswer | null;
+      required: boolean;
+      complete: boolean;
+    }>;
+  }>;
+}
+
+export interface ListenText {
+  label: string;
+  help: string;
+}
+
+interface FinalizedDocument {
+  id: string;
+  status: 'confirmed' | 'pdf_generated';
+}
+
+export interface AutomationResult {
+  sessionId: string;
+  status: 'ready_for_submission';
+  filled: Array<{ sourceField: string; targetField: string; confidence: 'high' }>;
+  manualReview: Array<{ sourceField: string; reason: string }>;
+}
+
+function authorizationHeaders(): Record<string, string> {
+  const token = authService.getAccessToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function documentRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
+    credentials: 'include',
+    headers: { ...authorizationHeaders(), ...options.headers },
+  });
+
+  if (!response.ok) {
+    let message = "We couldn't complete that request. Please try again.";
+    try {
+      const body = await response.json();
+      if (body?.error?.message && response.status < 500) message = body.error.message;
+    } catch {
+      // Use the safe fallback message.
+    }
+    if (response.status >= 500) message = "We couldn't connect to AccessAI. Please try again.";
+    throw new ApiError(message, response.status);
+  }
+
+  return response.json() as Promise<T>;
+}
+
 export const documentService = {
   /**
    * Upload a document file (PDF, PNG, JPEG, WebP)
@@ -143,24 +208,82 @@ export const documentService = {
    * GET /api/documents/:id/form
    */
   async getForm(documentId: string): Promise<AccessibilityTask> {
-    const headers: Record<string, string> = {};
-    const token = authService.getAccessToken();
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    const response = await fetch(`${API_BASE_URL}/documents/${documentId}/form`, {
-      method: 'GET',
-      credentials: 'include',
-      headers,
-    });
-
-    if (!response.ok) {
-      throw new ApiError("Failed to fetch document form.", response.status);
-    }
-
-    const data = (await response.json()) as { form: AccessibilityTask };
+    const data = await documentRequest<{ form: AccessibilityTask }>(`/documents/${documentId}/form`);
     return data.form;
+  },
+
+  /** GET /api/documents/:id/form/answers */
+  async getAnswers(documentId: string): Promise<FormAnswers> {
+    const data = await documentRequest<{ answers: FormAnswers }>(`/documents/${documentId}/form/answers`);
+    return data.answers;
+  },
+
+  /** Translate the owned form field text for browser text-to-speech. */
+  async getTranslatedFieldText(documentId: string, fieldId: string, locale: 'hi-IN' | 'te-IN' | 'kn-IN'): Promise<ListenText> {
+    const data = await documentRequest<{ text: ListenText }>(
+      `/documents/${documentId}/form/fields/${encodeURIComponent(fieldId)}/listen-text?locale=${encodeURIComponent(locale)}`,
+    );
+    return data.text;
+  },
+
+  /** PUT /api/documents/:id/form/answers. The server merges partial answers. */
+  async saveAnswers(documentId: string, answers: FormAnswers): Promise<FormAnswers> {
+    const data = await documentRequest<{ answers: FormAnswers }>(`/documents/${documentId}/form/answers`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ answers }),
+    });
+    return data.answers;
+  },
+
+  /** GET /api/documents/:id/review */
+  async getReview(documentId: string): Promise<DocumentReview> {
+    const data = await documentRequest<{ review: DocumentReview }>(`/documents/${documentId}/review`);
+    return data.review;
+  },
+
+  /** Opens a separate browser window and fills only high-confidence matches. */
+  async startBrowserAutomation(documentId: string, targetUrl: string): Promise<AutomationResult> {
+    const data = await documentRequest<{ automation: AutomationResult }>(`/documents/${documentId}/automation/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetUrl }),
+    });
+    return data.automation;
+  },
+
+  /** POST /api/documents/:id/review/confirm */
+  async confirmReview(documentId: string): Promise<FinalizedDocument> {
+    const data = await documentRequest<{ document: FinalizedDocument }>(`/documents/${documentId}/review/confirm`, {
+      method: 'POST',
+    });
+    return data.document;
+  },
+
+  /** POST /api/documents/:id/pdf */
+  async generatePdf(documentId: string): Promise<FinalizedDocument> {
+    const data = await documentRequest<{ document: FinalizedDocument }>(`/documents/${documentId}/pdf`, {
+      method: 'POST',
+    });
+    return data.document;
+  },
+
+  /** GET /api/documents/:id/pdf. The server authorizes and streams the completed PDF. */
+  async downloadPdf(documentId: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/documents/${documentId}/pdf`, {
+      credentials: 'include',
+      headers: authorizationHeaders(),
+    });
+    if (!response.ok || !response.headers.get('content-type')?.includes('application/pdf')) {
+      throw new ApiError('Unable to download the PDF. Please try again.', response.status);
+    }
+
+    const objectUrl = URL.createObjectURL(await response.blob());
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = 'completed-form.pdf';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
   },
 
   /**

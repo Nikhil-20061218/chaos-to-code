@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Eye, EyeOff, Sparkles, Shield, UserCheck, ArrowLeft } from 'lucide-react';
 import { BrandLogo } from '../components/landing/BrandLogo';
 import { Button } from '../components/common/Button';
@@ -16,7 +16,7 @@ interface LoginPageProps {
 
 export const LoginPage: React.FC<LoginPageProps> = ({
   onNavigate,
-  successMessage,
+  successMessage: initialSuccessMessage,
   initialEmail = '',
 }) => {
   const [email, setEmail] = useState(initialEmail);
@@ -27,10 +27,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(initialSuccessMessage || null);
   
   // Loading states
   const [isLoading, setIsLoading] = useState(false);
   const [isGuestLoading, setIsGuestLoading] = useState(false);
+
+  useEffect(() => {
+    setSuccessMessage(initialSuccessMessage || null);
+  }, [initialSuccessMessage]);
 
   const navigate = (path: string, state?: Record<string, unknown>) => {
     if (onNavigate) {
@@ -74,6 +79,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
     setIsLoading(true);
     setServerError(null);
+    setSuccessMessage(null);
 
     try {
       await authService.login({
