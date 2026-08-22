@@ -2,6 +2,7 @@ const Document = require('../models/Document');
 const { findOwnedDocument } = require('./documentProcessingService');
 const { validateAccessibilityTask } = require('../schemas/accessibilityTaskSchema');
 const { validateFormAnswers } = require('./formAnswerService');
+const { removeGeneratedPdf } = require('./generatedPdfStorageService');
 const AppError = require('../utils/AppError');
 
 function completedForm(document) {
@@ -35,10 +36,11 @@ async function saveAnswers({ documentId, owner, answers }) {
   const merged = { ...existing, ...updates };
   const saved = await Document.findOneAndUpdate(
     { _id: document._id, ownerType: owner.type, ownerId: owner.id, status: 'completed', analysisStatus: 'completed' },
-    { $set: { answers: merged } },
+    { $set: { answers: merged, finalizationStatus: 'ready_for_review' }, $unset: { generatedPdfPath: 1, generatedPdfCreatedAt: 1 } },
     { new: true },
   );
   if (!saved) throw new AppError('Document form is not available.', 409);
+  await removeGeneratedPdf(document.generatedPdfPath);
   return merged;
 }
 

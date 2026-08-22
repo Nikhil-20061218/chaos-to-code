@@ -7,8 +7,8 @@
   "scripts": {
     "start": "node server/src/server.js",
     "dev": "node --watch server/src/server.js",
-    "test": "node --test server/test/health.test.js server/test/auth.test.js server/test/document.test.js server/test/documentProcessing.test.js server/test/aiService.test.js server/test/guidedForm.test.js",
-    "lint": "node --check server/src/app.js && node --check server/src/controllers/documentController.js && node --check server/src/routes/documentRoutes.js && node --check server/src/schemas/accessibilityTaskSchema.js && node --check server/src/prompts/documentAnalysisPrompt.js && node --check server/src/services/aiService.js && node --check server/src/services/geminiDocumentAdapter.js && node --check server/src/services/documentService.js && node --check server/src/services/documentProcessingService.js && node --check server/src/services/formAnswerService.js && node --check server/src/services/guidedFormService.js"
+    "test": "node --test server/test/health.test.js server/test/auth.test.js server/test/document.test.js server/test/documentProcessing.test.js server/test/aiService.test.js server/test/guidedForm.test.js server/test/review.test.js",
+    "lint": "node --check server/src/app.js && node --check server/src/controllers/documentController.js && node --check server/src/routes/documentRoutes.js && node --check server/src/schemas/accessibilityTaskSchema.js && node --check server/src/prompts/documentAnalysisPrompt.js && node --check server/src/services/aiService.js && node --check server/src/services/geminiDocumentAdapter.js && node --check server/src/services/documentService.js && node --check server/src/services/documentProcessingService.js && node --check server/src/services/formAnswerService.js && node --check server/src/services/guidedFormService.js && node --check server/src/services/generatedPdfStorageService.js && node --check server/src/services/pdfGenerationService.js && node --check server/src/services/reviewService.js"
   },
   "engines": {
     "node": ">=18"
@@ -22,6 +22,7 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^8.24.3",
     "multer": "^2.2.0",
-    "nodemailer": "^9.0.5"
+    "nodemailer": "^9.0.5",
+    "pdfkit": "^0.19.1"
   }
 }

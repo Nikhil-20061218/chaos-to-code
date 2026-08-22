@@ -12,10 +12,10 @@ function assertValidDocumentId(id) {
   if (!mongoose.isValidObjectId(id)) throw new AppError('Document not found.', 404);
 }
 
-async function findOwnedDocument(id, owner, includeStoragePath = false) {
+async function findOwnedDocument(id, owner, includePrivatePaths = false) {
   assertValidDocumentId(id);
   const query = Document.findOne(documentQuery(id, owner));
-  const document = includeStoragePath ? await query.select('+storagePath') : await query;
+  const document = includePrivatePaths ? await query.select('+storagePath +generatedPdfPath') : await query;
   if (!document) throw new AppError('Document not found.', 404);
   return document;
 }

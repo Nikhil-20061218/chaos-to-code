@@ -1,5 +1,6 @@
 const Document = require('../models/Document');
 const { finalizeUploadedFile, removeFile } = require('./documentStorageService');
+const { removeGeneratedPdf } = require('./generatedPdfStorageService');
 
 const DEFAULT_RETENTION_MS = 24 * 60 * 60 * 1000;
 
@@ -49,9 +50,10 @@ async function createDocument({ file, owner }) {
 }
 
 async function cleanupExpiredDocuments() {
-  const expiredDocuments = await Document.find({ expiresAt: { $lte: new Date() } }).select('+storagePath');
+  const expiredDocuments = await Document.find({ expiresAt: { $lte: new Date() } }).select('+storagePath +generatedPdfPath');
   for (const document of expiredDocuments) {
     await removeFile(document.storagePath);
+    await removeGeneratedPdf(document.generatedPdfPath);
     await Document.deleteOne({ _id: document._id });
   }
 }
