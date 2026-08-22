@@ -11,8 +11,13 @@ const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
+const clientOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
+  .split(',').map((origin) => origin.trim()).filter(Boolean);
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin(origin, callback) {
+    if (!origin || clientOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('Origin is not allowed by CORS.'));
+  },
   credentials: true,
 }));
 app.use(express.json());

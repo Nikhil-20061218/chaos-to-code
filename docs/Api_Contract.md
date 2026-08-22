@@ -1,84 +1,40 @@
 # API Contract
 
-Base:
- /api
+Base path: `/api`
+
+Document endpoints require either a bearer access token for the owning user or the owning `guestSession` cookie. Missing and non-owned documents return a safe `404`.
 
 ## Authentication
 
-POST /api/auth/...
+- `POST /api/auth/register` — `{ name, email, password }`; starts email verification.
+- `POST /api/auth/verify-email` — `{ email, otp }`.
+- `POST /api/auth/resend-otp` — `{ email }`.
+- `POST /api/auth/login` — `{ email, password }`; returns `{ accessToken, user }` and sets an HTTP-only refresh cookie.
+- `POST /api/auth/refresh` — rotates the refresh cookie and returns access data.
+- `POST /api/auth/logout` — clears the refresh session.
+- `GET /api/auth/me` — requires bearer authentication.
 
-## Guest Session
+## Guest session
 
-POST /api/guest/session
+- `POST /api/guest/session` — sets the HTTP-only `guestSession` cookie.
 
-## Upload
+## Documents
 
-POST /api/documents/upload
+- `POST /api/documents/upload` — multipart field `file`; accepts PDF, PNG, and JPEG.
+- `POST /api/documents/:id/analyze` — starts document analysis.
+- `GET /api/documents/:id` — returns owned document metadata.
+- `GET /api/documents/:id/form` — returns `{ form }`.
+- `GET /api/documents/:id/form/answers` — returns `{ answers }`.
+- `PUT /api/documents/:id/form/answers` — `{ answers }`; validates and merges partial answers.
+- `GET /api/documents/:id/form/fields/:fieldId/listen-text?locale=hi-IN|te-IN|kn-IN` — returns translated `{ text }` for an owned field.
 
-## Analyze
+## Review and PDF
 
-POST /api/documents/:id/analyze
+- `GET /api/documents/:id/review` — returns `{ review }` with completion state, required fields, ordered sections, and saved answers.
+- `POST /api/documents/:id/review/confirm` — requires complete valid answers; returns `{ document: { id, status: "confirmed" } }`.
+- `POST /api/documents/:id/pdf` — requires confirmation; returns `{ document: { id, status: "pdf_generated" } }`.
+- `GET /api/documents/:id/pdf` — streams the owner-protected generated PDF as `completed-form.pdf`.
 
-## Guided Form
+## Browser automation
 
-GET /api/documents/:id/form
-
-GET /api/documents/:id/form/answers
-
-PUT /api/documents/:id/form/answers
-
-## Review and Finalization
-
-All endpoints below require the authenticated document owner or the valid guest-session owner. Missing and non-owned documents return a safe 404.
-
-GET /api/documents/:id/review
-
-Returns the ordered form fields with saved answers, completion state, and required fields that still need values.
-
-```json
-{
-  "review": {
-    "title": "Application Form",
-    "language": "en",
-    "complete": false,
-    "missingRequiredFields": ["email"],
-    "sections": []
-  }
-}
-```
-
-POST /api/documents/:id/review/confirm
-
-Requires a complete valid review. Returns:
-
-```json
-{ "document": { "id": "...", "status": "confirmed" } }
-```
-
-POST /api/documents/:id/pdf
-
-Requires confirmation. Generates a completed PDF once and reuses an existing valid generated PDF.
-
-```json
-{ "document": { "id": "...", "status": "pdf_generated" } }
-```
-
-GET /api/documents/:id/pdf
-
-Requires an owner and a generated PDF. Streams `application/pdf` with the safe download name `completed-form.pdf`.
-
-## Save Answers
-
-POST /api/tasks/:id/answers
-
-## Generate PDF
-
-POST /api/tasks/:id/generate-pdf
-
-## Download
-
-GET /api/tasks/:id/download
-
-## Delete
-
-DELETE /api/tasks/:id
+- `POST /api/documents/:id/automation/start` — `{ targetUrl }`; validates ownership, completed answers, and an HTTP(S) URL. Returns `{ automation }` with a session ID, high-confidence filled fields, and fields requiring manual review. It never submits the external form.
