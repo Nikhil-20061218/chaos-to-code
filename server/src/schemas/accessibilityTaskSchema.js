@@ -41,6 +41,19 @@ function validateAccessibilityTask(input) {
         fieldIds.add(fieldId);
         if (!FIELD_TYPES.has(field.type)) throw new AppError('AccessibilityTask field type is invalid.', 422);
         if (typeof field.required !== 'boolean') throw new AppError('AccessibilityTask field required is invalid.', 422);
+        let options;
+        if (field.options !== undefined) {
+          if (!['select', 'radio'].includes(field.type) || !Array.isArray(field.options) || field.options.length === 0 || field.options.length > 100) {
+            throw new AppError('AccessibilityTask field options are invalid.', 422);
+          }
+          const optionValues = new Set();
+          options = field.options.map((option) => {
+            const value = requireText(option, 'field option', 200);
+            if (optionValues.has(value)) throw new AppError('AccessibilityTask field options must be unique.', 422);
+            optionValues.add(value);
+            return value;
+          });
+        }
         return {
           id: fieldId,
           label: requireText(field.label, 'field label'),
@@ -48,6 +61,7 @@ function validateAccessibilityTask(input) {
           type: field.type,
           required: field.required,
           help: requireText(field.help, 'field help'),
+          ...(options ? { options } : {}),
         };
       }),
     };

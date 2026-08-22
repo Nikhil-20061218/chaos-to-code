@@ -11,6 +11,7 @@ const documentSchema = new mongoose.Schema(
     status: { type: String, enum: ['uploaded', 'processing', 'completed', 'failed'], default: 'uploaded' },
     analysisStatus: { type: String, enum: ['not_started', 'processing', 'completed', 'failed'], default: 'not_started' },
     analysis: { type: mongoose.Schema.Types.Mixed, default: undefined },
+    answers: { type: mongoose.Schema.Types.Mixed, default: () => ({}) },
     expiresAt: { type: Date, required: true, index: true },
   },
   { timestamps: { createdAt: true, updatedAt: false } },

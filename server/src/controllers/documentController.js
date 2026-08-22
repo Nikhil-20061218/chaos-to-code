@@ -1,5 +1,6 @@
 const documentService = require('../services/documentService');
 const documentProcessingService = require('../services/documentProcessingService');
+const guidedFormService = require('../services/guidedFormService');
 const AppError = require('../utils/AppError');
 const asyncHandler = require('../utils/asyncHandler');
 
@@ -25,4 +26,21 @@ const getDocument = asyncHandler(async (request, response) => {
   response.status(200).json({ document });
 });
 
-module.exports = { upload, analyze, getDocument };
+const getForm = asyncHandler(async (request, response) => {
+  const form = await guidedFormService.getForm({ documentId: request.params.id, owner: request.uploadOwner });
+  response.status(200).json({ form });
+});
+
+const getAnswers = asyncHandler(async (request, response) => {
+  const answers = await guidedFormService.getAnswers({ documentId: request.params.id, owner: request.uploadOwner });
+  response.status(200).json({ answers });
+});
+
+const saveAnswers = asyncHandler(async (request, response) => {
+  const answers = await guidedFormService.saveAnswers({
+    documentId: request.params.id, owner: request.uploadOwner, answers: request.body && request.body.answers,
+  });
+  response.status(200).json({ answers });
+});
+
+module.exports = { upload, analyze, getDocument, getForm, getAnswers, saveAnswers };

@@ -28,6 +28,7 @@ const ACCESSIBILITY_TASK_JSON_SCHEMA = {
                 type: { type: 'string', enum: ['text', 'textarea', 'email', 'tel', 'number', 'date', 'select', 'checkbox', 'radio'] },
                 required: { type: 'boolean' },
                 help: { type: 'string' },
+                options: { type: 'array', items: { type: 'string' } },
               },
               required: ['id', 'label', 'simpleLabel', 'type', 'required', 'help'],
             },

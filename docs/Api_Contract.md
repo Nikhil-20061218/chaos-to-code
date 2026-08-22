@@ -19,6 +19,14 @@ POST /api/documents/upload
 
 POST /api/documents/:id/analyze
 
+## Guided Form
+
+GET /api/documents/:id/form
+
+GET /api/documents/:id/form/answers
+
+PUT /api/documents/:id/form/answers
+
 ## Save Answers
 
 POST /api/tasks/:id/answers
