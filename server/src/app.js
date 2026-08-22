@@ -1,13 +1,21 @@
 const express = require('express');
+const cookieParser = require('cookie-parser');
 const healthRoutes = require('./routes/healthRoutes');
+const authRoutes = require('./routes/authRoutes');
+const guestRoutes = require('./routes/guestRoutes');
+const documentRoutes = require('./routes/documentRoutes');
 const apiNotFound = require('./middleware/apiNotFound');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
 
 app.use(express.json());
+app.use(cookieParser());
 
 app.use('/api', healthRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/guest', guestRoutes);
+app.use('/api/documents', documentRoutes);
 app.use('/api', apiNotFound);
 app.use(errorHandler);
 

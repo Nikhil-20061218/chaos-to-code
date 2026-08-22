@@ -7,14 +7,21 @@
   "scripts": {
     "start": "node server/src/server.js",
     "dev": "node --watch server/src/server.js",
-    "test": "node --test server/test/health.test.js",
-    "lint": "node --check server/src/app.js"
+    "test": "node --test server/test/health.test.js server/test/auth.test.js server/test/document.test.js server/test/documentProcessing.test.js server/test/aiService.test.js",
+    "lint": "node --check server/src/app.js && node --check server/src/controllers/documentController.js && node --check server/src/routes/documentRoutes.js && node --check server/src/schemas/accessibilityTaskSchema.js && node --check server/src/prompts/documentAnalysisPrompt.js && node --check server/src/services/aiService.js && node --check server/src/services/geminiDocumentAdapter.js && node --check server/src/services/documentService.js && node --check server/src/services/documentProcessingService.js"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
+    "@google/genai": "^2.18.0",
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
     "dotenv": "^16.6.1",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.24.3",
+    "multer": "^2.2.0",
+    "nodemailer": "^9.0.5"
   }
 }
