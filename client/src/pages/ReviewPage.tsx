@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, CheckCircle2, Download, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Download, Loader2, ExternalLink } from 'lucide-react';
 import { Alert } from '../components/common/Alert';
 import { Button } from '../components/common/Button';
 import { SkipLink } from '../components/accessibility/SkipLink';
 import { BrandLogo } from '../components/landing/BrandLogo';
-import { DocumentReview, documentService } from '../services/documentService';
+import { AutomationResult, DocumentReview, documentService } from '../services/documentService';
 
 interface ReviewPageProps {
   documentId: string;
@@ -16,6 +16,10 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({ documentId, onNavigate }
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [action, setAction] = useState<'idle' | 'confirming' | 'generating' | 'confirmed' | 'ready' | 'downloading'>('idle');
+  const [targetUrl, setTargetUrl] = useState('');
+  const [automation, setAutomation] = useState<AutomationResult | null>(null);
+  const [automationError, setAutomationError] = useState<string | null>(null);
+  const [automating, setAutomating] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -72,6 +76,19 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({ documentId, onNavigate }
     }
   };
 
+  const automateForm = async () => {
+    setAutomationError(null);
+    setAutomation(null);
+    setAutomating(true);
+    try {
+      setAutomation(await documentService.startBrowserAutomation(documentId, targetUrl));
+    } catch (error) {
+      setAutomationError(error instanceof Error ? error.message : 'Unable to automate that form. Please try again.');
+    } finally {
+      setAutomating(false);
+    }
+  };
+
   return <div className="min-h-screen bg-slate-50 text-slate-900">
     <SkipLink />
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
@@ -89,6 +106,14 @@ export const ReviewPage: React.FC<ReviewPageProps> = ({ documentId, onNavigate }
         </section>
         {!review.complete && <Alert variant="error">Some required answers are missing. Return to the form to complete them.</Alert>}
         {review.sections.map((section) => <section key={section.id} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-card-soft sm:p-8"><h2 className="text-lg font-bold">{section.title}</h2><dl className="mt-4 divide-y divide-slate-200">{section.fields.map((field) => <div key={field.id} className="py-3"><dt className="text-sm font-semibold text-slate-800">{field.label}{field.required && <span className="ml-1 text-red-700">*</span>}</dt><dd className="mt-1 text-sm text-slate-600">{field.answer === true ? 'Yes' : field.answer === false ? 'No' : field.answer ?? 'Not provided'}</dd></div>)}</dl></section>)}
+        {review.complete && <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-card-soft sm:p-8">
+          <div className="flex items-start gap-3"><ExternalLink className="mt-1 h-5 w-5 text-brand-700" aria-hidden="true" /><div><h2 className="text-lg font-bold">Browser automation</h2><p className="mt-1 text-sm text-slate-600">AccessAI opens a separate browser window to assist with filling the form. Review every field there and submit it yourself.</p></div></div>
+          <label htmlFor="target-url" className="mt-5 block text-sm font-semibold text-slate-800">Target website URL</label>
+          <input id="target-url" type="url" inputMode="url" autoComplete="url" placeholder="https://example.com/form" value={targetUrl} onChange={(event) => setTargetUrl(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-200" />
+          {automationError && <Alert variant="error" className="mt-4">{automationError}</Alert>}
+          {automation && <div className="mt-4 space-y-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950" aria-live="polite"><p className="font-bold">Ready for submission in the separate browser window</p><p>AccessAI filled {automation.filled.length} high-confidence field{automation.filled.length === 1 ? '' : 's'}. Nothing has been submitted.</p>{automation.filled.length > 0 && <ul className="list-disc pl-5">{automation.filled.map((field) => <li key={field.sourceField}>{field.sourceField} → {field.targetField}</li>)}</ul>}{automation.manualReview.length > 0 && <div><p className="font-semibold">Manual review required</p><ul className="list-disc pl-5">{automation.manualReview.map((field) => <li key={field.sourceField}>{field.sourceField}: {field.reason}</li>)}</ul></div>}</div>}
+          <div className="mt-5"><Button onClick={() => void automateForm()} disabled={automating || !targetUrl.trim()} leftIcon={<ExternalLink className="h-4 w-4" />}>{automating ? 'Opening website…' : 'Open automated browser for review'}</Button></div>
+        </section>}
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-card-soft sm:p-8">
           <div aria-live="polite" className="min-h-6 text-sm font-medium text-slate-700">
             {action === 'confirming' && 'Confirming your answers...'}

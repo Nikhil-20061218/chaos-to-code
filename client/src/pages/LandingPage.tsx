@@ -26,9 +26,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 font-medium">
           <p>© {new Date().getFullYear()} AccessAI. Universal digital accessibility for all.</p>
           <div className="flex items-center gap-6">
-            <a href="#privacy" className="hover:text-slate-900 transition-colors">Privacy</a>
-            <a href="#terms" className="hover:text-slate-900 transition-colors">Terms</a>
-            <a href="#accessibility" className="hover:text-slate-900 transition-colors">Accessibility Statement</a>
+            <button type="button" onClick={() => onNavigate?.('/security')} className="hover:text-slate-900 transition-colors">Privacy & security</button>
+            <button type="button" onClick={() => onNavigate?.('/about')} className="hover:text-slate-900 transition-colors">About</button>
+            <button type="button" onClick={() => onNavigate?.('/help')} className="hover:text-slate-900 transition-colors">Help</button>
           </div>
         </div>
       </footer>

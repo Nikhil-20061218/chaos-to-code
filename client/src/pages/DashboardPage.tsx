@@ -67,9 +67,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
     { label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, active: true, path: '/dashboard' },
     { label: 'New Document', icon: <FilePlus className="w-4 h-4" />, active: false, path: '/upload' },
     { label: 'My Documents', icon: <FolderOpen className="w-4 h-4" />, active: false, path: '/dashboard' },
-    { label: 'Profile', icon: <User className="w-4 h-4" />, active: false, path: '/dashboard' },
-    { label: 'Settings', icon: <Settings className="w-4 h-4" />, active: false, path: '/dashboard' },
-    { label: 'Help & Support', icon: <HelpCircle className="w-4 h-4" />, active: false, path: '/dashboard' },
+    { label: 'Profile', icon: <User className="w-4 h-4" />, active: false, path: '/settings' },
+    { label: 'Settings', icon: <Settings className="w-4 h-4" />, active: false, path: '/settings' },
+    { label: 'Help & Support', icon: <HelpCircle className="w-4 h-4" />, active: false, path: '/help' },
   ];
 
   return (

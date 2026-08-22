@@ -43,9 +43,21 @@ export interface DocumentReview {
   }>;
 }
 
+export interface ListenText {
+  label: string;
+  help: string;
+}
+
 interface FinalizedDocument {
   id: string;
   status: 'confirmed' | 'pdf_generated';
+}
+
+export interface AutomationResult {
+  sessionId: string;
+  status: 'ready_for_submission';
+  filled: Array<{ sourceField: string; targetField: string; confidence: 'high' }>;
+  manualReview: Array<{ sourceField: string; reason: string }>;
 }
 
 function authorizationHeaders(): Record<string, string> {
@@ -206,6 +218,14 @@ export const documentService = {
     return data.answers;
   },
 
+  /** Translate the owned form field text for browser text-to-speech. */
+  async getTranslatedFieldText(documentId: string, fieldId: string, locale: 'hi-IN' | 'te-IN' | 'kn-IN'): Promise<ListenText> {
+    const data = await documentRequest<{ text: ListenText }>(
+      `/documents/${documentId}/form/fields/${encodeURIComponent(fieldId)}/listen-text?locale=${encodeURIComponent(locale)}`,
+    );
+    return data.text;
+  },
+
   /** PUT /api/documents/:id/form/answers. The server merges partial answers. */
   async saveAnswers(documentId: string, answers: FormAnswers): Promise<FormAnswers> {
     const data = await documentRequest<{ answers: FormAnswers }>(`/documents/${documentId}/form/answers`, {
@@ -220,6 +240,14 @@ export const documentService = {
   async getReview(documentId: string): Promise<DocumentReview> {
     const data = await documentRequest<{ review: DocumentReview }>(`/documents/${documentId}/review`);
     return data.review;
+  },
+
+  /** Opens a separate browser window and fills only high-confidence matches. */
+  async startBrowserAutomation(documentId: string, targetUrl: string): Promise<AutomationResult> {
+    const data = await documentRequest<{ automation: AutomationResult }>(`/documents/${documentId}/automation/start`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ targetUrl }),
+    });
+    return data.automation;
   },
 
   /** POST /api/documents/:id/review/confirm */

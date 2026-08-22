@@ -4,6 +4,7 @@ import { BrandLogo } from '../components/landing/BrandLogo';
 import { Alert } from '../components/common/Alert';
 import { Button } from '../components/common/Button';
 import { SkipLink } from '../components/accessibility/SkipLink';
+import { VoiceAssistance } from '../components/accessibility/VoiceAssistance';
 import { AccessibilityTask, FormAnswer, FormAnswers, documentService } from '../services/documentService';
 
 interface GuidedFormPageProps {
@@ -32,6 +33,7 @@ export const GuidedFormPage: React.FC<GuidedFormPageProps> = ({ documentId, onNa
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -53,6 +55,7 @@ export const GuidedFormPage: React.FC<GuidedFormPageProps> = ({ documentId, onNa
   }, [documentId]);
 
   const currentSection = form?.sections[sectionIndex];
+  const activeField = currentSection?.fields.find((field) => field.id === activeFieldId);
 
   const updateAnswer = (id: string, value: FormAnswer) => {
     setAnswers((current) => ({ ...current, [id]: value }));
@@ -157,6 +160,7 @@ export const GuidedFormPage: React.FC<GuidedFormPageProps> = ({ documentId, onNa
       'aria-invalid': Boolean(error),
       'aria-describedby': describedBy,
       className: `mt-2 block w-full rounded-xl border bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-200 ${error ? 'border-red-500' : 'border-slate-300'}`,
+      onFocus: () => setActiveFieldId(field.id),
     };
     const value = answers[field.id];
 
@@ -172,7 +176,7 @@ export const GuidedFormPage: React.FC<GuidedFormPageProps> = ({ documentId, onNa
         : field.type === 'radio' ? <fieldset aria-describedby={describedBy} aria-invalid={Boolean(error)} className="mt-2 space-y-2">
           <legend className="text-sm font-bold text-slate-800">{field.label} {field.required && <span className="text-red-700">*</span>}</legend>
           {field.options?.map((option, optionIndex) => <label key={option} className="flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm text-slate-700">
-            <input id={`${field.id}-option-${optionIndex}`} type="radio" name={field.id} value={option} checked={value === option} onChange={() => updateAnswer(field.id, option)} className="h-4 w-4 accent-brand-700" />{option}
+          <input id={`${field.id}-option-${optionIndex}`} type="radio" name={field.id} value={option} checked={value === option} onFocus={() => setActiveFieldId(field.id)} onChange={() => updateAnswer(field.id, option)} className="h-4 w-4 accent-brand-700" />{option}
           </label>)}
         </fieldset>
         : field.type === 'checkbox' ? <label className="flex min-h-11 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-800">
@@ -206,6 +210,12 @@ export const GuidedFormPage: React.FC<GuidedFormPageProps> = ({ documentId, onNa
         {saveError && <Alert variant="error">{saveError}</Alert>}
         {saveSuccess && <Alert variant="success"><CheckCircle2 className="h-4 w-4" aria-hidden="true" />{saveSuccess}</Alert>}
         <form noValidate onSubmit={(event) => { event.preventDefault(); void saveAndContinue(); }} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-card-soft sm:p-8">
+          <VoiceAssistance
+            key={`${documentId}-${sectionIndex}`}
+            activeField={activeField}
+            onTranscript={updateAnswer}
+            onTranslateForListening={(fieldId, locale) => documentService.getTranslatedFieldText(documentId, fieldId, locale)}
+          />
           <div className="space-y-6">{currentSection.fields.map(renderField)}</div>
           <div className="mt-8 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
             <Button type="button" variant="secondary" onClick={() => setSectionIndex((index) => index - 1)} disabled={sectionIndex === 0 || saving} leftIcon={<ChevronLeft className="h-4 w-4" />}>Back</Button>

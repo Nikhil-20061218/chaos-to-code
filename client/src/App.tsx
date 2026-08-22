@@ -8,6 +8,8 @@ import { UploadPage } from './pages/UploadPage';
 import { ProcessingPage } from './pages/ProcessingPage';
 import { GuidedFormPage } from './pages/GuidedFormPage';
 import { ReviewPage } from './pages/ReviewPage';
+import { AboutPage, FeaturesPage, HelpPage, HowItWorksPage, SecurityPage } from './pages/InfoPages';
+import { SettingsPage } from './pages/SettingsPage';
 
 interface RouteState {
   verifiedEmail?: boolean;
@@ -24,6 +26,7 @@ export const App: React.FC = () => {
     if (path === '/register' || window.location.hash === '#register') return '/register';
     if (path === '/verify-email' || window.location.hash === '#verify-email') return '/verify-email';
     if (path === '/dashboard' || window.location.hash === '#dashboard') return '/dashboard';
+    if (['/features', '/how-it-works', '/security', '/about', '/help', '/settings'].includes(path)) return path;
     if (path === '/upload' || window.location.hash === '#upload') return '/upload';
     if (path === '/processing' || window.location.hash === '#processing') return '/processing';
     if (path.startsWith('/documents/') || window.location.hash.startsWith('#documents/')) return path || window.location.hash.replace('#', '/');
@@ -43,6 +46,8 @@ export const App: React.FC = () => {
         setCurrentPath('/verify-email');
       } else if (path === '/dashboard' || window.location.hash === '#dashboard') {
         setCurrentPath('/dashboard');
+      } else if (['/features', '/how-it-works', '/security', '/about', '/help', '/settings'].includes(path)) {
+        setCurrentPath(path);
       } else if (path === '/upload' || window.location.hash === '#upload') {
         setCurrentPath('/upload');
       } else if (path === '/processing' || window.location.hash === '#processing') {
@@ -110,6 +115,12 @@ export const App: React.FC = () => {
   if (currentPath === '/dashboard') {
     return <DashboardPage onNavigate={navigate} />;
   }
+  if (currentPath === '/features') return <FeaturesPage onNavigate={navigate} />;
+  if (currentPath === '/how-it-works') return <HowItWorksPage onNavigate={navigate} />;
+  if (currentPath === '/security') return <SecurityPage onNavigate={navigate} />;
+  if (currentPath === '/about') return <AboutPage onNavigate={navigate} />;
+  if (currentPath === '/help') return <HelpPage onNavigate={navigate} />;
+  if (currentPath === '/settings') return <SettingsPage onNavigate={navigate} />;
 
   // Render Register Page (Page 3)
   if (currentPath === '/register') {
