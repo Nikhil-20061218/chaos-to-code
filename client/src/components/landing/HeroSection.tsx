@@ -3,6 +3,7 @@ import { Button } from '../common/Button';
 import { TrustIndicators } from './TrustIndicators';
 import { WorkflowVisual } from './WorkflowVisual';
 import { authService } from '../../services/authService';
+import { Alert } from '../common/Alert';
 
 interface HeroSectionProps {
   onNavigate?: (path: string) => void;
@@ -10,6 +11,7 @@ interface HeroSectionProps {
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate }) => {
   const [startingGuest, setStartingGuest] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = (path: string) => {
     if (onNavigate) {
       onNavigate(path);
@@ -20,7 +22,19 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate }) => {
 
   const continueAsGuest = async () => {
     setStartingGuest(true);
-    try { await authService.createGuestSession(); } finally { setStartingGuest(false); navigate('/upload'); }
+    setError(null);
+    try {
+      await authService.createGuestSession();
+      navigate('/dashboard');
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'An unexpected error occurred. Please try again.'
+      );
+    } finally {
+      setStartingGuest(false);
+    }
   };
 
   return (
@@ -60,7 +74,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate }) => {
                 variant="primary"
                 size="lg"
                 onClick={() => navigate('/upload')}
-                className="rounded-xl px-7 py-4 text-base font-semibold shadow-md hover:shadow-lg transition-all"
+                className="rounded-xl px-7 py-4 text-base font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-700 focus-visible:ring-offset-2"
               >
                 Upload a Form
               </Button>
@@ -70,11 +84,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate }) => {
                 size="lg"
                 onClick={() => void continueAsGuest()}
                 disabled={startingGuest}
-                className="rounded-xl px-7 py-4 text-base font-medium border-slate-300 text-slate-700 hover:bg-slate-50 transition-all"
+                className="rounded-xl px-7 py-4 text-base font-medium border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-700 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
               >
                 {startingGuest ? 'Starting guest session…' : 'Continue as Guest'}
               </Button>
             </div>
+
+            {error && (
+              <div className="pt-2 max-w-xl animate-in fade-in slide-in-from-top-1 duration-200">
+                <Alert variant="error">{error}</Alert>
+              </div>
+            )}
 
             {/* Trust Badges */}
             <div className="pt-4 border-t border-slate-100">
