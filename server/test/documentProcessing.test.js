@@ -114,6 +114,7 @@ test('document processing enforces ownership, state transitions, and validated A
     aiService.analyzeDocument = async () => ({ title: 'Invalid', language: 'en', sections: [] });
     const invalid = await fetch(`${baseUrl}/api/documents/507f1f77bcf86cd799439024/analyze`, { method: 'POST', headers: auth });
     assert.equal(invalid.status, 422);
+    assert.equal((await invalid.json()).error.message, 'We could not identify form fields with confidence. Please upload a clearer document.');
     assert.equal(documents.get('507f1f77bcf86cd799439024').status, 'failed');
     assert.equal(documents.get('507f1f77bcf86cd799439024').analysisStatus, 'failed');
 

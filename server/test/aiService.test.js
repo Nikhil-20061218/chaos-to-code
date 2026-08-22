@@ -39,6 +39,9 @@ test('Gemini document adapter sends local PDFs as inline data and returns struct
   assert.deepEqual(validateAccessibilityTask(output), validTask());
   assert.equal(request.model, 'test-model');
   assert.equal(request.config.responseMimeType, 'application/json');
+  assert.match(request.contents[0].parts[0].text, /Ground every field in visible source evidence/);
+  assert.match(request.contents[0].parts[0].text, /Never add personal-information fields such as phone number/);
+  assert.match(request.contents[0].parts[0].text, /omit it rather than inventing it/);
   assert.equal(request.contents[0].parts[1].inlineData.mimeType, 'application/pdf');
   assert.equal(typeof request.contents[0].parts[1].inlineData.data, 'string');
   assert.equal(request.contents[0].parts[1].inlineData.data.includes(filePath), false);

@@ -11,6 +11,11 @@ export interface RegisterResponse {
   message: string;
 }
 
+export interface VerifyEmailCredentials {
+  email: string;
+  otp: string;
+}
+
 let inMemoryAccessToken: string | null = null;
 let currentUser: User | null = null;
 
@@ -48,6 +53,31 @@ export const authService = {
         email: credentials.email.trim(),
         password: credentials.password,
       }),
+    });
+  },
+
+  /**
+   * Confirm the verification code sent after registration.
+   * POST /api/auth/verify-email
+   */
+  async verifyEmail(credentials: VerifyEmailCredentials): Promise<{ message: string }> {
+    return apiClient<{ message: string }>('/auth/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({
+        email: credentials.email.trim(),
+        otp: credentials.otp.trim(),
+      }),
+    });
+  },
+
+  /**
+   * Request a replacement verification code.
+   * POST /api/auth/resend-otp
+   */
+  async resendOtp(email: string): Promise<{ message: string }> {
+    return apiClient<{ message: string }>('/auth/resend-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email: email.trim() }),
     });
   },
 

@@ -57,7 +57,9 @@ async function analyzeDocument({ documentId, owner }) {
     } catch (_updateError) {
       // The original error is still safely handled by the global error middleware.
     }
-    if (error instanceof AppError && error.status === 422) throw error;
+    if (error instanceof AppError && error.status === 422) {
+      throw new AppError('We could not identify form fields with confidence. Please upload a clearer document.', 422);
+    }
     throw new AppError('Document analysis failed.', 502);
   }
 }
