@@ -10,6 +10,10 @@ router.post('/:id/analyze', uploadOwner, controller.analyze);
 router.get('/:id/form', uploadOwner, controller.getForm);
 router.get('/:id/form/answers', uploadOwner, controller.getAnswers);
 router.put('/:id/form/answers', uploadOwner, controller.saveAnswers);
+router.get('/:id/review', uploadOwner, controller.getReview);
+router.post('/:id/review/confirm', uploadOwner, controller.confirmReview);
+router.post('/:id/pdf', uploadOwner, controller.generatePdf);
+router.get('/:id/pdf', uploadOwner, controller.downloadPdf);
 router.get('/:id', uploadOwner, controller.getDocument);
 
 module.exports = router;
