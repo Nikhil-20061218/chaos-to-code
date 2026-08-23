@@ -22,12 +22,11 @@ interface UploadPageProps {
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-const ALLOWED_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.webp'];
+const ALLOWED_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg'];
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
   'image/png',
   'image/jpeg',
-  'image/webp',
 ];
 
 export const UploadPage: React.FC<UploadPageProps> = ({ onNavigate }) => {
@@ -227,7 +226,7 @@ export const UploadPage: React.FC<UploadPageProps> = ({ onNavigate }) => {
               Upload your document
             </h1>
             <p className="text-sm text-slate-500 font-medium">
-              PDF, PNG, JPG, or WebP up to 10MB
+              PDF, PNG, or JPG up to 10MB
             </p>
           </div>
 
@@ -285,7 +284,7 @@ export const UploadPage: React.FC<UploadPageProps> = ({ onNavigate }) => {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/*"
+              accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
               onChange={handleInputChange}
               className="sr-only"
               aria-hidden="true"

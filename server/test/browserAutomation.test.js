@@ -17,10 +17,15 @@ const form = { title: 'Test form', language: 'en', sections: [{ id: 'details', t
   { id: 'address', label: 'Address', simpleLabel: 'Address', type: 'text', required: false, help: 'Enter address.' },
 ] }] };
 
-test('browser automation validates only http and https URLs', () => {
-  assert.equal(validateTargetUrl('https://example.com/form'), 'https://example.com/form');
+test('browser automation validates only http and https URLs', async () => {
+  assert.equal(await validateTargetUrl('https://example.com/form'), 'https://example.com/form');
   for (const url of ['javascript:alert(1)', 'data:text/html,test', 'file:///tmp/form.html']) {
-    assert.throws(() => validateTargetUrl(url), { status: 422 });
+    await assert.rejects(() => validateTargetUrl(url), { status: 422 });
+  }
+
+  // Verify SSRF private IP block rules
+  for (const privateUrl of ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://169.254.169.254/latest/meta-data/']) {
+    await assert.rejects(() => validateTargetUrl(privateUrl), { status: 422 });
   }
 });
 

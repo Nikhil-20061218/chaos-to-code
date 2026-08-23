@@ -37,6 +37,29 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate }) => {
     }
   };
 
+  const handleUploadClick = async () => {
+    const hasSession = Boolean(authService.getCurrentUser() || document.cookie.includes('guestSession'));
+    if (hasSession) {
+      navigate('/upload');
+      return;
+    }
+
+    setStartingGuest(true);
+    setError(null);
+    try {
+      await authService.createGuestSession();
+      navigate('/upload');
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'An unexpected error occurred. Please try again.'
+      );
+    } finally {
+      setStartingGuest(false);
+    }
+  };
+
   return (
     <section aria-labelledby="hero-title" className="relative pt-12 pb-20 md:pt-20 md:pb-28 overflow-hidden">
       {/* Background Soft Purple Glow Decor */}
@@ -73,10 +96,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onNavigate }) => {
               <Button
                 variant="primary"
                 size="lg"
-                onClick={() => navigate('/upload')}
+                onClick={() => void handleUploadClick()}
+                disabled={startingGuest}
                 className="rounded-xl px-7 py-4 text-base font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-700 focus-visible:ring-offset-2"
               >
-                Upload a Form
+                {startingGuest ? 'Starting guest session…' : 'Upload a Form'}
               </Button>
 
               <Button

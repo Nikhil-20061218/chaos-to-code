@@ -6,7 +6,10 @@ const { generateCompletedPdf } = require('./pdfGenerationService');
 const { hasGeneratedPdf } = require('./generatedPdfStorageService');
 const AppError = require('../utils/AppError');
 
-function isCompleteAnswer(value) {
+function isCompleteAnswer(value, fieldType) {
+  if (fieldType === 'checkbox') {
+    return value === true;
+  }
   return value !== undefined && value !== null && (typeof value !== 'string' || value.trim().length > 0);
 }
 
@@ -19,7 +22,7 @@ function buildDocumentReview(document) {
     title: section.title,
     fields: section.fields.map((field) => {
       const answer = Object.prototype.hasOwnProperty.call(answers, field.id) ? answers[field.id] : null;
-      const complete = isCompleteAnswer(answer);
+      const complete = isCompleteAnswer(answer, field.type);
       if (field.required && !complete) missingRequiredFields.push(field.id);
       return { id: field.id, label: field.label, answer, required: field.required, complete };
     }),

@@ -1,4 +1,5 @@
-import { apiClient } from './apiClient';
+let refreshPromise: Promise<{ accessToken: string }> | null = null;
+import { apiClient, setAccessToken, getAccessToken } from './apiClient';
 import { LoginCredentials, LoginResponse, GuestSessionResponse, User } from '../types/auth';
 
 export interface RegisterCredentials {
@@ -16,7 +17,6 @@ export interface VerifyEmailCredentials {
   otp: string;
 }
 
-let inMemoryAccessToken: string | null = null;
 let currentUser: User | null = null;
 
 export const authService = {
@@ -34,7 +34,7 @@ export const authService = {
     });
 
     if (data.accessToken) {
-      inMemoryAccessToken = data.accessToken;
+      setAccessToken(data.accessToken);
       currentUser = data.user;
     }
 
@@ -82,6 +82,46 @@ export const authService = {
   },
 
   /**
+   * Refresh the access token using the HTTP-only refresh cookie
+   * POST /api/auth/refresh
+   */
+  async refresh(): Promise<{ accessToken: string }> {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = apiClient<{ accessToken: string }>('/auth/refresh', {
+    method: 'POST',
+  })
+    .then((data) => {
+      if (data.accessToken) {
+        setAccessToken(data.accessToken);
+      }
+
+      return data;
+    })
+    .finally(() => {
+      refreshPromise = null;
+    });
+
+  return refreshPromise;
+},
+
+  /**
+   * Get the current user details
+   * GET /api/auth/me
+   */
+  async me(): Promise<{ user: User }> {
+    const data = await apiClient<{ user: User }>('/auth/me', {
+      method: 'GET',
+    });
+    if (data.user) {
+      currentUser = data.user;
+    }
+    return data;
+  },
+
+  /**
    * Logout current session
    * POST /api/auth/logout
    */
@@ -95,7 +135,7 @@ export const authService = {
       // Even if network fails, ensure local auth is cleared
       return { message: 'Logged out locally' };
     } finally {
-      inMemoryAccessToken = null;
+      setAccessToken(null);
       currentUser = null;
     }
   },
@@ -114,7 +154,7 @@ export const authService = {
    * Get the current in-memory access token
    */
   getAccessToken(): string | null {
-    return inMemoryAccessToken;
+    return getAccessToken();
   },
 
   /**
@@ -135,7 +175,7 @@ export const authService = {
    * Clear in-memory token state
    */
   clearAuth(): void {
-    inMemoryAccessToken = null;
+    setAccessToken(null);
     currentUser = null;
   },
 };

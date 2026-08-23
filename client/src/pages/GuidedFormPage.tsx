@@ -34,6 +34,7 @@ export const GuidedFormPage: React.FC<GuidedFormPageProps> = ({ documentId, onNa
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeFieldId, setActiveFieldId] = useState<string | null>(null);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -53,6 +54,15 @@ export const GuidedFormPage: React.FC<GuidedFormPageProps> = ({ documentId, onNa
       });
     return () => { active = false; };
   }, [documentId]);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('accessai-accessibility-settings') || '{}');
+      setVoiceEnabled(saved.voiceEnabled !== false);
+    } catch {
+      // Ignore
+    }
+  }, []);
 
   const currentSection = form?.sections[sectionIndex];
   const activeField = currentSection?.fields.find((field) => field.id === activeFieldId);
@@ -176,7 +186,7 @@ export const GuidedFormPage: React.FC<GuidedFormPageProps> = ({ documentId, onNa
         : field.type === 'radio' ? <fieldset aria-describedby={describedBy} aria-invalid={Boolean(error)} className="mt-2 space-y-2">
           <legend className="text-sm font-bold text-slate-800">{field.label} {field.required && <span className="text-red-700">*</span>}</legend>
           {field.options?.map((option, optionIndex) => <label key={option} className="flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm text-slate-700">
-          <input id={`${field.id}-option-${optionIndex}`} type="radio" name={field.id} value={option} checked={value === option} onFocus={() => setActiveFieldId(field.id)} onChange={() => updateAnswer(field.id, option)} className="h-4 w-4 accent-brand-700" />{option}
+          <input id={`${field.id}-option-${optionIndex}`} type="radio" name={field.id} value={option} checked={value === option} onFocus={() => setActiveFieldId(field.id)} onChange={() => updateAnswer(field.id, option)} aria-describedby={describedBy} aria-invalid={Boolean(error)} aria-required={field.required || undefined} className="h-4 w-4 accent-brand-700" />{option}
           </label>)}
         </fieldset>
         : field.type === 'checkbox' ? <label className="flex min-h-11 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-800">
@@ -210,12 +220,14 @@ export const GuidedFormPage: React.FC<GuidedFormPageProps> = ({ documentId, onNa
         {saveError && <Alert variant="error">{saveError}</Alert>}
         {saveSuccess && <Alert variant="success"><CheckCircle2 className="h-4 w-4" aria-hidden="true" />{saveSuccess}</Alert>}
         <form noValidate onSubmit={(event) => { event.preventDefault(); void saveAndContinue(); }} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-card-soft sm:p-8">
-          <VoiceAssistance
-            key={`${documentId}-${sectionIndex}`}
-            activeField={activeField}
-            onTranscript={updateAnswer}
-            onTranslateForListening={(fieldId, locale) => documentService.getTranslatedFieldText(documentId, fieldId, locale)}
-          />
+          {voiceEnabled && (
+            <VoiceAssistance
+              key={`${documentId}-${sectionIndex}`}
+              activeField={activeField}
+              onTranscript={updateAnswer}
+              onTranslateForListening={(fieldId, locale) => documentService.getTranslatedFieldText(documentId, fieldId, locale)}
+            />
+          )}
           <div className="space-y-6">{currentSection.fields.map(renderField)}</div>
           <div className="mt-8 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
             <Button type="button" variant="secondary" onClick={() => setSectionIndex((index) => index - 1)} disabled={sectionIndex === 0 || saving} leftIcon={<ChevronLeft className="h-4 w-4" />}>Back</Button>

@@ -117,3 +117,92 @@ test('secure document upload accepts valid owned files and rejects unsafe upload
     assert.equal((await fs.readdir(testDirectory)).length, 4);
   });
 });
+
+test('secure document upload rejects mismatched extensions, content, or unsupported WebP', async (t) => {
+  const testDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'accessai-upload-test-mismatch-'));
+  const originalDirectory = process.env.UPLOAD_TMP_DIR;
+  
+  process.env.UPLOAD_TMP_DIR = testDirectory;
+  t.after(async () => {
+    if (originalDirectory === undefined) delete process.env.UPLOAD_TMP_DIR;
+    else process.env.UPLOAD_TMP_DIR = originalDirectory;
+    await fs.rm(testDirectory, { recursive: true, force: true });
+  });
+
+  const userId = '507f1f77bcf86cd799439011';
+  const authorization = { authorization: `Bearer ${generateAccessToken(userId)}` };
+  
+  // PDF extension but plain text content
+  const fakePdfContent = Buffer.from('this is not a pdf file, just plain text');
+  // WebP magic bytes (RIFF .... WEBP)
+  const webpContent = Buffer.from([0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50]);
+
+  await withServer(t, async (baseUrl) => {
+    // 1. PDF extension but plain text content should fail magic byte validation (400)
+    const mismatchContentResponse = await fetch(`${baseUrl}/api/documents/upload`, {
+      method: 'POST',
+      headers: authorization,
+      body: formWithFile(fakePdfContent, 'application/pdf', 'fake.pdf'),
+    });
+    assert.equal(mismatchContentResponse.status, 400);
+
+    // 2. WebP content/MIME should be rejected (400)
+    const webpResponse = await fetch(`${baseUrl}/api/documents/upload`, {
+      method: 'POST',
+      headers: authorization,
+      body: formWithFile(webpContent, 'image/webp', 'image.webp'),
+    });
+    assert.equal(webpResponse.status, 400);
+  });
+});
+
+test('GET /api/documents returns all documents owned by the user', async (t) => {
+  const originalFind = Document.find;
+  const mockDocs = [
+    {
+      _id: { toString: () => 'document-1' },
+      ownerType: 'user',
+      ownerId: '507f1f77bcf86cd799439011',
+      originalName: 'file1.pdf',
+      mimeType: 'application/pdf',
+      size: 100,
+      status: 'uploaded',
+    },
+    {
+      _id: { toString: () => 'document-2' },
+      ownerType: 'user',
+      ownerId: '507f1f77bcf86cd799439011',
+      originalName: 'file2.png',
+      mimeType: 'image/png',
+      size: 200,
+      status: 'completed',
+      analysis: { title: 'Form 2' },
+    }
+  ];
+
+  Document.find = async (query) => {
+    assert.equal(query.ownerType, 'user');
+    assert.equal(query.ownerId, '507f1f77bcf86cd799439011');
+    return mockDocs;
+  };
+
+  t.after(() => {
+    Document.find = originalFind;
+  });
+
+  const userId = '507f1f77bcf86cd799439011';
+  const authorization = { authorization: `Bearer ${generateAccessToken(userId)}` };
+
+  await withServer(t, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/documents`, {
+      method: 'GET',
+      headers: authorization,
+    });
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.deepEqual(body.documents, [
+      { id: 'document-1', originalName: 'file1.pdf', mimeType: 'application/pdf', size: 100, status: 'uploaded' },
+      { id: 'document-2', originalName: 'file2.png', mimeType: 'image/png', size: 200, status: 'completed', analysis: { title: 'Form 2' } }
+    ]);
+  });
+});

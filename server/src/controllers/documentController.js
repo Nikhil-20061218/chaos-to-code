@@ -80,4 +80,9 @@ const downloadPdf = asyncHandler(async (request, response) => {
   fs.createReadStream(filePath).on('error', () => response.destroy()).pipe(response);
 });
 
-module.exports = { upload, analyze, getDocument, getForm, getAnswers, getTranslatedFieldText, saveAnswers, getReview, confirmReview, generatePdf, downloadPdf };
+const listDocuments = asyncHandler(async (request, response) => {
+  const documents = await documentService.listDocuments({ owner: request.uploadOwner });
+  response.status(200).json({ documents });
+});
+
+module.exports = { upload, analyze, getDocument, getForm, getAnswers, getTranslatedFieldText, saveAnswers, getReview, confirmReview, generatePdf, downloadPdf, listDocuments };

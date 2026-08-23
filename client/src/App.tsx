@@ -10,6 +10,9 @@ import { GuidedFormPage } from './pages/GuidedFormPage';
 import { ReviewPage } from './pages/ReviewPage';
 import { AboutPage, FeaturesPage, HelpPage, HowItWorksPage, SecurityPage } from './pages/InfoPages';
 import { SettingsPage } from './pages/SettingsPage';
+import { authService } from './services/authService';
+import { setAccessToken } from './services/apiClient';
+import { Loader2 } from 'lucide-react';
 
 interface RouteState {
   verifiedEmail?: boolean;
@@ -34,6 +37,37 @@ export const App: React.FC = () => {
   });
 
   const [routeState, setRouteState] = useState<RouteState>({});
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
+
+  useEffect(() => {
+    // Apply contrast and motion classes on startup
+    try {
+      const saved = JSON.parse(localStorage.getItem('accessai-accessibility-settings') || '{}');
+      document.documentElement.classList.toggle('accessai-high-contrast', Boolean(saved.contrast));
+      document.documentElement.classList.toggle('accessai-reduced-motion', Boolean(saved.reducedMotion));
+    } catch {
+      // Ignore
+    }
+
+    const restoreSession = async () => {
+      try {
+        const refreshResult = await authService.refresh();
+        if (refreshResult && refreshResult.accessToken) {
+          setAccessToken(refreshResult.accessToken);
+          await authService.me();
+          if (['/', '/login', '/register', '/verify-email'].includes(currentPath)) {
+            navigate('/dashboard');
+          }
+        }
+      } catch (error) {
+        authService.clearAuth();
+      } finally {
+        setIsRestoringSession(false);
+      }
+    };
+    
+    void restoreSession();
+  }, []);
 
   useEffect(() => {
     const handlePopState = () => {
@@ -87,6 +121,17 @@ export const App: React.FC = () => {
   const formMatch = currentPath.match(/\/documents\/([^/]+)\/form/);
   const reviewMatch = currentPath.match(/\/documents\/([^/]+)\/review/);
   const docId = formMatch ? formMatch[1] : routeState.documentId;
+
+  if (isRestoringSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center text-sm font-medium text-slate-600">
+          <Loader2 className="mx-auto mb-3 h-6 w-6 animate-spin text-brand-700" aria-hidden="true" />
+          Restoring session...
+        </div>
+      </div>
+    );
+  }
 
   // Render Upload Page (Page 5 - Real Upload Page)
   if (currentPath === '/upload') {

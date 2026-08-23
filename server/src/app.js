@@ -1,3 +1,6 @@
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '..', '.env') });
+
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -8,6 +11,7 @@ const documentRoutes = require('./routes/documentRoutes');
 const browserAutomationRoutes = require('./routes/browserAutomationRoutes');
 const apiNotFound = require('./middleware/apiNotFound');
 const errorHandler = require('./middleware/errorHandler');
+const csrfProtection = require('./middleware/csrfProtection');
 
 const app = express();
 
@@ -22,6 +26,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+app.use(csrfProtection);
 
 app.use('/api', healthRoutes);
 app.use('/api/auth', authRoutes);

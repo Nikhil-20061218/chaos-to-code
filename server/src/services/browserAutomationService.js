@@ -1,4 +1,6 @@
 const crypto = require('crypto');
+const dns = require('dns').promises;
+const net = require('net');
 const { findOwnedDocument } = require('./documentProcessingService');
 const { buildDocumentReview } = require('./reviewService');
 const AppError = require('../utils/AppError');
@@ -23,13 +25,48 @@ function overlap(left, right) {
   return count;
 }
 
-function validateTargetUrl(value) {
+function isPrivateIp(ip) {
+  if (net.isIPv4(ip)) {
+    const parts = ip.split('.').map(Number);
+    if (parts[0] === 127) return true;
+    if (parts[0] === 10) return true;
+    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+    if (parts[0] === 192 && parts[1] === 168) return true;
+    if (parts[0] === 169 && parts[1] === 254) return true;
+    if (parts[0] === 0) return true;
+    return false;
+  }
+  
+  if (net.isIPv6(ip)) {
+    const normalized = ip.toLowerCase();
+    if (normalized === '::1' || normalized === '::') return true;
+    if (normalized.startsWith('fe8') || normalized.startsWith('fe9') || normalized.startsWith('fea') || normalized.startsWith('feb')) return true;
+    if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true;
+    return false;
+  }
+  
+  return true;
+}
+
+async function validateTargetUrl(value) {
   if (typeof value !== 'string' || value.length > 2048) throw new AppError('Enter a valid website URL.', 422);
   let url;
   try { url = new URL(value); } catch (_error) { throw new AppError('Enter a valid website URL.', 422); }
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
     throw new AppError('Only public http or https website URLs are supported.', 422);
   }
+
+  const hostname = url.hostname;
+  try {
+    const lookup = await dns.lookup(hostname);
+    if (isPrivateIp(lookup.address)) {
+      throw new AppError('Access to private network IP addresses is restricted.', 422);
+    }
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    throw new AppError('Enter a valid website URL.', 422);
+  }
+
   return url.toString();
 }
 
@@ -58,12 +95,13 @@ function mapFields(form, answers, targetFields) {
   const filled = [];
   const manualReview = [];
   const usedTargets = new Set();
+  const normalizedTargets = targetFields.map((t, idx) => ({ ...t, index: t.index !== undefined ? t.index : idx }));
   for (const source of sourceFields(form, answers)) {
     const exact = normalized(source.id);
-    const candidates = targetFields.filter((target, index) => !usedTargets.has(index) && compatible(source, target)).map((target, index) => {
+    const candidates = normalizedTargets.filter((target) => !usedTargets.has(target.index) && compatible(source, target)).map((target) => {
       const text = targetText(target);
       const exactMatch = normalized(text).includes(exact) || normalized(text).includes(normalized(source.label));
-      return { target, index: targetFields.indexOf(target), score: exactMatch ? 100 : overlap(`${source.label} ${source.simpleLabel} ${source.id}`, text) };
+      return { target, index: target.index, score: exactMatch ? 100 : overlap(`${source.label} ${source.simpleLabel} ${source.id}`, text) };
     }).filter((candidate) => candidate.score >= 2).sort((a, b) => b.score - a.score);
     if (candidates.length === 1 || (candidates[0] && candidates[0].score >= 100 && candidates[0].score > candidates[1]?.score)) {
       const match = candidates[0];
@@ -121,11 +159,11 @@ async function startAutomation({ documentId, owner, targetUrl }) {
   const document = await findOwnedDocument(documentId, owner);
   const review = buildDocumentReview(document);
   if (!review.complete) throw new AppError('Complete all required form answers before automating a website.', 422);
-  const safeUrl = validateTargetUrl(targetUrl);
+  const safeUrl = await validateTargetUrl(targetUrl);
   let browser;
   try {
     const puppeteer = require('puppeteer');
-    browser = await puppeteer.launch({ headless: false, defaultViewport: { width: 1280, height: 900 }, args: ['--no-first-run'] });
+    browser = await puppeteer.launch({ headless: 'new', defaultViewport: { width: 1280, height: 900 }, args: ['--no-first-run', '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] });
     const page = await browser.newPage();
     await page.goto(safeUrl, { waitUntil: 'domcontentloaded', timeout: NAVIGATION_TIMEOUT_MS });
     await tagControls(page);

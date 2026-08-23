@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Sparkles, CheckCircle2, Loader2, AlertCircle, ArrowLeft, RefreshCw, Bot } from 'lucide-react';
 import { BrandLogo } from '../components/landing/BrandLogo';
 import { Button } from '../components/common/Button';
@@ -26,7 +26,7 @@ export const ProcessingPage: React.FC<ProcessingPageProps> = ({
   const [statusStep, setStatusStep] = useState<number>(2); // 0..4
   const [progressPercent, setProgressPercent] = useState<number>(40);
   const [error, setError] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState<boolean>(true);
+  const analysisCompletedRef = useRef<boolean>(false);
 
   const navigate = (path: string, state?: Record<string, unknown>) => {
     if (onNavigate) {
@@ -39,22 +39,22 @@ export const ProcessingPage: React.FC<ProcessingPageProps> = ({
   useEffect(() => {
     if (!resolvedDocId) {
       setError('No document found for analysis. Please upload a document first.');
-      setIsProcessing(false);
       return;
     }
 
     let isMounted = true;
+    analysisCompletedRef.current = false;
 
     // Simulated progress indicators while waiting for Gemini API response
     const timer1 = setTimeout(() => {
-      if (isMounted && isProcessing) {
+      if (isMounted && !analysisCompletedRef.current) {
         setStatusStep(2);
         setProgressPercent(60);
       }
     }, 1200);
 
     const timer2 = setTimeout(() => {
-      if (isMounted && isProcessing) {
+      if (isMounted && !analysisCompletedRef.current) {
         setStatusStep(3);
         setProgressPercent(82);
       }
@@ -66,9 +66,9 @@ export const ProcessingPage: React.FC<ProcessingPageProps> = ({
         const completedDoc = await documentService.analyzeDocument(resolvedDocId);
         if (!isMounted) return;
 
+        analysisCompletedRef.current = true;
         setStatusStep(4);
         setProgressPercent(100);
-        setIsProcessing(false);
 
         // Store analysis result in sessionStorage for reliable form rendering
         try {
@@ -91,7 +91,7 @@ export const ProcessingPage: React.FC<ProcessingPageProps> = ({
         }, 800);
       } catch (err: unknown) {
         if (!isMounted) return;
-        setIsProcessing(false);
+        analysisCompletedRef.current = true;
         if (err instanceof ApiError) {
           setError(err.message);
         } else if (err instanceof Error) {

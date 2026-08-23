@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   FilePlus,
@@ -12,13 +12,15 @@ import {
   Menu,
   X,
   FileText,
-  UserCheck,
+  Loader2,
 } from 'lucide-react';
 import { BrandLogo } from '../components/landing/BrandLogo';
 import { Button } from '../components/common/Button';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { SkipLink } from '../components/accessibility/SkipLink';
 import { authService } from '../services/authService';
+import { documentService } from '../services/documentService';
+import { UploadedDocument } from '../types/document';
 
 interface DashboardPageProps {
   onNavigate?: (path: string) => void;
@@ -27,11 +29,32 @@ interface DashboardPageProps {
 export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [isGuestLoading, setIsGuestLoading] = useState(false);
+  const [documents, setDocuments] = useState<UploadedDocument[]>([]);
+  const [isLoadingDocs, setIsLoadingDocs] = useState(true);
 
   const currentUser = authService.getCurrentUser();
   const userName = currentUser?.name || 'Guest User';
   const userInitial = userName.charAt(0).toUpperCase();
+
+  useEffect(() => {
+    let active = true;
+    setIsLoadingDocs(true);
+    documentService.getDocuments()
+      .then((docs) => {
+        if (active) {
+          setDocuments(docs);
+        }
+      })
+      .catch(() => {
+        // Safe fallback
+      })
+      .finally(() => {
+        if (active) {
+          setIsLoadingDocs(false);
+        }
+      });
+    return () => { active = false; };
+  }, []);
 
   const navigate = (path: string) => {
     if (onNavigate) {
@@ -48,18 +71,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
     } finally {
       setIsLoggingOut(false);
       navigate('/');
-    }
-  };
-
-  const handleGuestContinue = async () => {
-    setIsGuestLoading(true);
-    try {
-      await authService.createGuestSession();
-      navigate('/upload');
-    } catch {
-      navigate('/upload');
-    } finally {
-      setIsGuestLoading(false);
     }
   };
 
@@ -156,11 +167,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                     setMobileNavOpen(false);
                     navigate(link.path);
                   }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                    link.active
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${link.active
                       ? 'bg-brand-50 text-brand-700 font-semibold'
                       : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  }`}
+                    }`}
                 >
                   {link.icon}
                   <span>{link.label}</span>
@@ -185,7 +195,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
       {/* Main Dashboard Layout Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full flex-1 grid grid-cols-1 md:grid-cols-12 gap-8">
-        
+
         {/* Desktop Sidebar Navigation (3 cols on md/lg) */}
         <aside aria-label="Dashboard Sidebar" className="hidden md:block md:col-span-3 space-y-6">
           <nav className="bg-white border border-slate-200/90 rounded-2xl p-3 shadow-card-soft space-y-1">
@@ -194,11 +204,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 key={link.label}
                 type="button"
                 onClick={() => navigate(link.path)}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-700 ${
-                  link.active
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-700 ${link.active
                     ? 'bg-brand-50 text-brand-700 font-semibold shadow-2xs'
                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                }`}
+                  }`}
               >
                 {link.icon}
                 <span>{link.label}</span>
@@ -220,7 +229,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
         {/* Main Content Area (9 cols on md/lg) */}
         <main id="main-content" tabIndex={-1} className="md:col-span-9 space-y-6 text-left focus:outline-none">
-          
+
           {/* Welcome Greeting */}
           <div className="space-y-1">
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
@@ -266,16 +275,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                   Upload a Document
                 </Button>
 
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  onClick={handleGuestContinue}
-                  disabled={isGuestLoading}
-                  className="bg-brand-800/80 hover:bg-brand-800 text-white border-white/20 font-medium rounded-xl px-5 py-3.5"
-                  leftIcon={<UserCheck className="w-4 h-4 text-brand-200" />}
-                >
-                  {isGuestLoading ? 'Starting Guest Session...' : 'Continue as Guest'}
-                </Button>
               </div>
             </div>
           </div>
@@ -288,64 +287,140 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
               </h2>
             </div>
 
-            {/* Polished Empty State (No documents yet) */}
-            <div className="bg-white border border-slate-200/90 rounded-3xl p-8 sm:p-10 shadow-card-soft text-center space-y-6">
-              
-              <div className="max-w-md mx-auto space-y-2">
-                <div className="w-14 h-14 rounded-2xl bg-brand-50 text-brand-700 mx-auto flex items-center justify-center border border-brand-100">
-                  <FileText className="w-7 h-7" aria-hidden="true" />
+            {isLoadingDocs ? (
+              <div className="bg-white border border-slate-200/90 rounded-3xl p-8 shadow-card-soft text-center text-sm text-slate-500">
+                <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin text-brand-700" />
+                Loading your documents...
+              </div>
+            ) : documents.length === 0 ? (
+              /* Polished Empty State (No documents yet) */
+              <div className="bg-white border border-slate-200/90 rounded-3xl p-8 sm:p-10 shadow-card-soft text-center space-y-6">
+                <div className="max-w-md mx-auto space-y-2">
+                  <div className="w-14 h-14 rounded-2xl bg-brand-50 text-brand-700 mx-auto flex items-center justify-center border border-brand-100">
+                    <FileText className="w-7 h-7" aria-hidden="true" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-800 tracking-tight pt-2">
+                    No documents yet
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                    Upload your first document to get started. AccessAI will automatically parse, translate, and guide you through every field.
+                  </p>
                 </div>
-                <h3 className="text-lg font-bold text-slate-800 tracking-tight pt-2">
-                  No documents yet
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-                  Upload your first document to get started. AccessAI will automatically parse, translate, and guide you through every field.
-                </p>
-              </div>
-
-              {/* Upload Action Button */}
-              <div>
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={() => navigate('/upload')}
-                  className="rounded-xl px-6 font-semibold"
-                  leftIcon={<Upload className="w-4 h-4" />}
-                >
-                  Upload Document
-                </Button>
-              </div>
-
-              {/* Visual 4-Step Journey */}
-              <div className="pt-6 border-t border-slate-100">
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">
-                  How AccessAI Works
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-                    <span className="text-[10px] font-bold text-brand-600">Step 1</span>
-                    <p className="text-xs font-bold text-slate-800">Upload</p>
-                    <p className="text-[11px] text-slate-500">PDF or photo</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-                    <span className="text-[10px] font-bold text-brand-600">Step 2</span>
-                    <p className="text-xs font-bold text-slate-800">AI Analysis</p>
-                    <p className="text-[11px] text-slate-500">Smart extraction</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-                    <span className="text-[10px] font-bold text-brand-600">Step 3</span>
-                    <p className="text-xs font-bold text-slate-800">Guided Form</p>
-                    <p className="text-[11px] text-slate-500">Plain language</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-                    <span className="text-[10px] font-bold text-brand-600">Step 4</span>
-                    <p className="text-xs font-bold text-slate-800">Accessible PDF</p>
-                    <p className="text-[11px] text-slate-500">Export & sign</p>
+                <div>
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={() => navigate('/upload')}
+                    className="rounded-xl px-6 font-semibold"
+                    leftIcon={<Upload className="w-4 h-4" />}
+                  >
+                    Upload Document
+                  </Button>
+                </div>
+                {/* Visual 4-Step Journey */}
+                <div className="pt-6 border-t border-slate-100">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">
+                    How AccessAI Works
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                      <span className="text-[10px] font-bold text-brand-600">Step 1</span>
+                      <p className="text-xs font-bold text-slate-800">Upload</p>
+                      <p className="text-[11px] text-slate-500">PDF or photo</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                      <span className="text-[10px] font-bold text-brand-600">Step 2</span>
+                      <p className="text-xs font-bold text-slate-800">AI Analysis</p>
+                      <p className="text-[11px] text-slate-500">Smart extraction</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                      <span className="text-[10px] font-bold text-brand-600">Step 3</span>
+                      <p className="text-xs font-bold text-slate-800">Guided Form</p>
+                      <p className="text-[11px] text-slate-500">Plain language</p>
+                    </div>
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
+                      <span className="text-[10px] font-bold text-brand-600">Step 4</span>
+                      <p className="text-xs font-bold text-slate-800">Accessible PDF</p>
+                      <p className="text-[11px] text-slate-500">Export & sign</p>
+                    </div>
                   </div>
                 </div>
               </div>
-
-            </div>
+            ) : (
+              /* Table list of documents */
+              <div className="bg-white border border-slate-200/90 rounded-3xl overflow-hidden shadow-card-soft">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100">
+                        <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider pl-6">Name</th>
+                        <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                        <th className="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider pr-6 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {documents.map((doc) => {
+                        const isPdf = doc.mimeType === 'application/pdf' || doc.originalName.toLowerCase().endsWith('.pdf');
+                        let actionLabel = 'Resume';
+                        let actionPath = `/documents/${doc.id}/form`;
+                        
+                        if (doc.status === 'uploaded') {
+                          actionLabel = 'Start Analysis';
+                          actionPath = `/processing?id=${doc.id}`;
+                        } else if (doc.status === 'completed') {
+                          actionLabel = 'Guided Form';
+                          actionPath = `/documents/${doc.id}/form`;
+                        } else if (['confirmed', 'pdf_generated'].includes(doc.status)) {
+                          actionLabel = 'Review & PDF';
+                          actionPath = `/documents/${doc.id}/review`;
+                        } else if (doc.status === 'failed') {
+                          actionLabel = 'Re-upload';
+                          actionPath = '/upload';
+                        }
+                        
+                        return (
+                          <tr key={doc.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="p-4 pl-6">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center border ${isPdf ? 'bg-red-50 border-red-100 text-red-600' : 'bg-brand-50 border-brand-100 text-brand-700'}`}>
+                                  <FileText className="w-4 h-4" />
+                                </div>
+                                <span className="text-sm font-bold text-slate-800 truncate max-w-[240px]" title={doc.originalName}>
+                                  {doc.originalName}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <StatusBadge status={doc.status} />
+                            </td>
+                            <td className="p-4 pr-6 text-right">
+                              <Button
+                                size="sm"
+                                variant={doc.status === 'uploaded' ? 'primary' : 'outline'}
+                                onClick={() => {
+                                  if (doc.status === 'failed') {
+                                    navigate('/upload');
+                                  } else {
+                                    if (doc.status === 'uploaded') {
+                                      navigate(`/processing?id=${doc.id}`);
+                                    } else {
+                                      navigate(actionPath);
+                                    }
+                                  }
+                                }}
+                                className="rounded-lg text-xs font-semibold"
+                              >
+                                {actionLabel}
+                              </Button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </section>
 
           {/* Reusable Document Status System Preview */}

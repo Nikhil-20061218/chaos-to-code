@@ -26,6 +26,12 @@ function validateRegister(input) {
   if (password.length < PASSWORD_MIN_LENGTH || password.length > 128) {
     throw new AppError(`Password must be between ${PASSWORD_MIN_LENGTH} and 128 characters.`, 400);
   }
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasDigit = /\d/.test(password);
+  if (!hasUppercase || !hasLowercase || !hasDigit) {
+    throw new AppError('Password must contain at least one uppercase letter, one lowercase letter, and one number.', 400);
+  }
   return { name, email: normalizeEmail(input.email), password };
 }
 

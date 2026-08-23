@@ -140,3 +140,26 @@ test('review, confirmation, PDF generation, and download enforce completed owner
     assert.equal((await fetch(`${baseUrl}/api/documents/507f1f77bcf86cd799439046/pdf`, { headers: userHeaders })).status, 409);
   });
 });
+
+test('PDF generation service loads font for Hindi form', async (t) => {
+  const { generateCompletedPdf } = require('../src/services/pdfGenerationService');
+  const hindiForm = {
+    title: 'आवेदन पत्र',
+    language: 'hi',
+    sections: [{
+      id: 'personal',
+      title: 'व्यक्तिगत जानकारी',
+      fields: [
+        { id: 'full_name', label: 'पूरा नाम', type: 'text', required: true }
+      ]
+    }]
+  };
+  const answers = { full_name: 'निखिल' };
+  const filePath = await generateCompletedPdf({ form: hindiForm, answers });
+  t.after(async () => {
+    const { removeGeneratedPdf } = require('../src/services/generatedPdfStorageService');
+    await removeGeneratedPdf(filePath);
+  });
+  const pdfBytes = await fs.readFile(filePath);
+  assert.ok(pdfBytes.subarray(0, 5).equals(Buffer.from('%PDF-')));
+});

@@ -88,6 +88,14 @@ async function documentRequest<T>(path: string, options: RequestInit = {}): Prom
 }
 
 export const documentService = {
+  /** GET /api/documents */
+  async getDocuments(): Promise<UploadedDocument[]> {
+    const data = await documentRequest<{ documents: UploadedDocument[] }>('/documents', {
+      method: 'GET',
+    });
+    return data.documents;
+  },
+
   /**
    * Upload a document file (PDF, PNG, JPEG, WebP)
    * POST /api/documents/upload

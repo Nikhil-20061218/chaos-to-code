@@ -34,6 +34,45 @@ test('register validates input and does not call the service for malformed data'
   });
 });
 
+test('register rejects weak passwords missing uppercase, lowercase, or digits', async (t) => {
+  const originalRegister = authService.register;
+  let called = false;
+  authService.register = async () => { called = true; };
+  t.after(() => { authService.register = originalRegister; });
+
+  await withServer(t, async (baseUrl) => {
+    // 1. Password too short
+    const res1 = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Rahul Kumar', email: 'rahul@example.com', password: 'Short1!' }),
+    });
+    assert.equal(res1.status, 400);
+
+    // 2. Missing uppercase
+    const res2 = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Rahul Kumar', email: 'rahul@example.com', password: 'lowercase12345!' }),
+    });
+    assert.equal(res2.status, 400);
+
+    // 3. Missing lowercase
+    const res3 = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Rahul Kumar', email: 'rahul@example.com', password: 'UPPERCASE12345!' }),
+    });
+    assert.equal(res3.status, 400);
+
+    // 4. Missing digit
+    const res4 = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Rahul Kumar', email: 'rahul@example.com', password: 'NoDigitsUppercaseLowercase!' }),
+    });
+    assert.equal(res4.status, 400);
+
+    assert.equal(called, false);
+  });
+});
+
 test('register passes normalized input and never returns credentials', async (t) => {
   const originalRegister = authService.register;
   let received;

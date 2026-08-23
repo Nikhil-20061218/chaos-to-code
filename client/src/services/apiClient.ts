@@ -1,6 +1,7 @@
 import { ApiErrorResponse } from '../types/auth';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || '/api';
 
 export class ApiError extends Error {
   status: number;
@@ -14,10 +15,24 @@ export class ApiError extends Error {
   }
 }
 
+let accessToken: string | null = null;
+
+export function setAccessToken(token: string | null): void {
+  accessToken = token;
+}
+
+export function getAccessToken(): string | null {
+  return accessToken;
+}
+
 export async function apiClient<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
+  /*
+   * If endpoint is already a complete URL, use it directly.
+   * Otherwise, prepend the backend API base URL.
+   */
   const url = endpoint.startsWith('http')
     ? endpoint
     : `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
@@ -26,9 +41,24 @@ export async function apiClient<T>(
     'Content-Type': 'application/json',
   };
 
+  /*
+   * Add JWT access token when available.
+   */
+  const token = getAccessToken();
+
+  if (token) {
+    defaultHeaders['Authorization'] = `Bearer ${token}`;
+  }
+
   const config: RequestInit = {
     ...options,
-    credentials: 'include', // Ensures cookies (guestSession, refreshToken) are included
+
+    /*
+     * Allows cookies such as refreshToken and guestSession
+     * to be sent with cross-origin requests.
+     */
+    credentials: 'include',
+
     headers: {
       ...defaultHeaders,
       ...options.headers,
@@ -36,6 +66,7 @@ export async function apiClient<T>(
   };
 
   let response: Response;
+
   try {
     response = await fetch(url, config);
   } catch (_networkError) {
@@ -46,37 +77,64 @@ export async function apiClient<T>(
     );
   }
 
+  /*
+   * Successful response
+   */
   if (response.ok) {
     // 204 No Content
     if (response.status === 204) {
       return {} as T;
     }
+
     return (await response.json()) as T;
   }
 
-  // Handle specific status codes
-  let errorMessage = 'An unexpected error occurred. Please try again.';
+  /*
+   * Default error values
+   */
+  let errorMessage =
+    'An unexpected error occurred. Please try again.';
+
   let errorCode = 'REQUEST_ERROR';
 
+  /*
+   * Try to read the backend's error response.
+   */
   try {
     const errorData: ApiErrorResponse = await response.json();
+
     if (errorData?.error?.message) {
       errorMessage = errorData.error.message;
     }
+
     if (errorData?.error?.code) {
       errorCode = errorData.error.code;
     }
   } catch {
-    // Fallback if response is not JSON
+    // Backend response was not JSON.
   }
 
+  /*
+   * Handle common HTTP errors.
+   */
   if (response.status === 401) {
     errorMessage = 'Invalid email or password.';
+  } else if (response.status === 403) {
+    errorMessage =
+      'You do not have permission to perform this action.';
+  } else if (response.status === 404) {
+    errorMessage = 'The requested resource was not found.';
   } else if (response.status === 429) {
-    errorMessage = 'Too many attempts. Please try again later.';
+    errorMessage =
+      'Too many attempts. Please try again later.';
   } else if (response.status >= 500) {
-    errorMessage = "We couldn't connect to AccessAI. Please try again.";
+    errorMessage =
+      "We couldn't connect to AccessAI. Please try again.";
   }
 
-  throw new ApiError(errorMessage, response.status, errorCode);
+  throw new ApiError(
+    errorMessage,
+    response.status,
+    errorCode
+  );
 }

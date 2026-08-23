@@ -49,6 +49,11 @@ async function createDocument({ file, owner }) {
   }
 }
 
+async function listDocuments({ owner }) {
+  const documents = await Document.find({ ownerType: owner.type, ownerId: owner.id });
+  return documents.map(publicDocument);
+}
+
 async function cleanupExpiredDocuments() {
   const expiredDocuments = await Document.find({ expiresAt: { $lte: new Date() } }).select('+storagePath +generatedPdfPath');
   for (const document of expiredDocuments) {
@@ -66,4 +71,4 @@ function scheduleExpiredDocumentCleanup() {
   return interval;
 }
 
-module.exports = { createDocument, getOwnedDocument, cleanupExpiredDocuments, scheduleExpiredDocumentCleanup, publicDocument, retentionMs };
+module.exports = { createDocument, getOwnedDocument, listDocuments, cleanupExpiredDocuments, scheduleExpiredDocumentCleanup, publicDocument, retentionMs };

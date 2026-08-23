@@ -56,7 +56,17 @@ function recognitionConstructor(): SpeechRecognitionConstructor | undefined {
 }
 
 export const VoiceAssistance: React.FC<VoiceAssistanceProps> = ({ activeField, onTranscript, onTranslateForListening }) => {
-  const [language, setLanguage] = useState<VoiceLanguage>('en-IN');
+  const [language, setLanguage] = useState<VoiceLanguage>(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('accessai-accessibility-settings') || '{}');
+      if (['en-IN', 'hi-IN', 'te-IN', 'kn-IN'].includes(saved.language)) {
+        return saved.language as VoiceLanguage;
+      }
+    } catch {
+      // Ignore
+    }
+    return 'en-IN';
+  });
   const [status, setStatus] = useState('Ready to listen.');
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);

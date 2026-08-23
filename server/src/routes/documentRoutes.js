@@ -6,6 +6,7 @@ const controller = require('../controllers/documentController');
 const router = express.Router();
 
 router.post('/upload', uploadOwner, uploadFile, controller.upload);
+router.get('/', uploadOwner, controller.listDocuments);
 router.post('/:id/analyze', uploadOwner, controller.analyze);
 router.get('/:id/form', uploadOwner, controller.getForm);
 router.get('/:id/form/answers', uploadOwner, controller.getAnswers);
